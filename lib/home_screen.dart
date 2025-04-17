@@ -1,6 +1,8 @@
 import 'dart:math';
 
+import 'package:calculator/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:math_expressions/math_expressions.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,173 +13,138 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
 
-  String expression = '';
-  String temp = '';
 
-  void action(String text) {
-    if(text=='AC'){
-      setState(() {
-        expression = '';
-        temp = '';
-      });
-      return;
-    }
+  String input = '';
+  String result = '';
+  var hideInput = false;
 
-    if (text == '='){
-      // 5+10 -> =
-      // 5,+,10
-      RegExp regExp = RegExp(r'(\d+.\d+|\d+\+|\-|\x|\/|\%)');
-      List<String> result = regExp.allMatches(expression).map((mobj)=>mobj.group(0)!).toList();
-      // int a = int.parse(result[0]);
-      // String op = result[1];
-      // int b= int.parse(result[2]);
-      // String ans = '';
 
-      // 5 + 3 - 2 + 7
-      List<String> ops = [];
-      List<int> numbers = [];
-      if (result.length == 2 && result[1] == '%'){
-        setState(() {
-          expression = '${int.parse(result[0])/100}';
-        });
+  calculate(String value){
+    if(value == 'AC'){
+      input = "";
+      result = "";
+    }else if(value == '<'){
+      if(value.isNotEmpty){
+        input = input.substring(0,input.length-1);
       }
-
-      for(int i=0;i<result.length;i++){
-        if(i%2 == 0) numbers.add(int.parse(result[i]));
-        else ops.add(result[i]);
-      }
-
-      print(ops);
-      print(numbers);
-      int index = 1;
-      int a = numbers[0], b=numbers[index],ans = 0;
-      for(String op in ops){
-
-        switch(op){
-          case "+": ans = a+b; break;
-          case "-": ans = a-b; break;
-          case "x": ans = a*b; break;
-          case "/": ans = a~/b; break;
+    }else if(value == '='){
+      if(value.isNotEmpty){
+        var calculateValue = input.replaceAll('x', '*');
+        Parser p = Parser();
+        Expression expression = p.parse(calculateValue);
+        ContextModel cm = ContextModel();
+        var finalValue = expression.evaluate(EvaluationType.REAL, cm);
+        result = finalValue.toString();
+        if(result.endsWith('.0')){
+          result = result.substring(0,result.length-2);
         }
-
-        a = ans;
-        if(ops.length == 1 || index == ops.length) break;
-        b = numbers[++index];
+        input = result;
+        hideInput = true;
       }
-
-      setState(() {
-        temp = expression;
-        expression = ans.toString();
-      });
-
     }else{
-
-      setState(() {
-        temp = '';
-        expression += text;
-      });
+      input +=value;
+      hideInput = false;
     }
+    setState(() {});
   }
 
-  Widget buildCard(String text, {int flex = 1}) {
-    Color color = (text == '/' ||
-        text == 'x' ||
-        text == '+' ||
-        text == '-' ||
-        text == '=')
-        ? Colors.orange
-        : Colors.white;
-    return Expanded(
-      flex: flex,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(200),
-        splashColor: Colors.orange,
-        hoverColor: Colors.black12,
-        onTap: () => action(text),
-        child: Card(
-          color: color,
-          elevation: 10,
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(200)),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 24, color: Colors.black54),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ),
-    );
+  bool isOperator(String text){
+    return ['AC','<','+/-','/','x','-','+','=','%'].contains(text);
   }
+
+
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Widget buildCard(String text) {
+      Color cardColor = isOperator(text) ? AppColors.operatorColor : (isDark ? AppColors.numberColorD : AppColors.numberColorL);
+      Color cardTextColor = isOperator(text) ? AppColors.operatorText : (isDark ? AppColors.numberTextD : AppColors.numberTextL);
+      return Expanded(
+          flex: 1,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(200),
+            splashColor: const Color(0xFFD9E4F7),
+            hoverColor: Colors.black12,
+            onTap: ()=>calculate(text),
+            child: Card(
+              color: cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+              child: Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: Text(text,textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 24,
+                        color: cardTextColor
+                    )),
+              ),
+            ),
+          ));
+    }
+
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Align(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(15.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(hideInput ? " " : input,
+                      style: TextStyle(fontSize: 35, color: isDark ? AppColors.valueD : AppColors.valueL))),
+              const SizedBox(height: 20),
+              Align(
                 alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 10.0,right: 5.0),
-                  child: Text(temp, style: TextStyle(fontSize: 28, color: Colors.black54),),
-                )),
-            Align(
-              alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 10.0,right: 5.0),
-                  child: Text(expression, style: TextStyle(fontSize: 28, color: Colors.black54),),
-                )),
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                buildCard('AC'),
-                buildCard('+/-'),
-                buildCard('%'),
-                buildCard('/'),
-              ],
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                buildCard('7'),
-                buildCard('8'),
-                buildCard('9'),
-                buildCard('x'),
-              ],
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                buildCard('4'),
-                buildCard('5'),
-                buildCard('6'),
-                buildCard('-'),
-              ],
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                buildCard('1'),
-                buildCard('2'),
-                buildCard('3'),
-                buildCard('+'),
-              ],
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                buildCard('0'),
-                buildCard('.'),
-                buildCard('=', flex: 2),
-              ],
-            ),
-          ],
+                child: Text(result,
+                    style: TextStyle(fontSize: 35, color: isDark ? AppColors.valueD : AppColors.valueL)),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  buildCard('AC'),
+                  buildCard('<'),
+                  buildCard('+/-'),
+                  buildCard('/'),
+                ],
+              ),
+              Row(
+                children: [
+                  buildCard('7'),
+                  buildCard('8'),
+                  buildCard('9'),
+                  buildCard('x'),
+                ],
+              ),
+              Row(
+                children: [
+                  buildCard('4'),
+                  buildCard('5'),
+                  buildCard('6'),
+                  buildCard('-'),
+                ],
+              ),
+              Row(
+                children: [
+                  buildCard('1'),
+                  buildCard('2'),
+                  buildCard('3'),
+                  buildCard('+'),
+                ],
+              ),
+              Row(
+                children: [
+                  buildCard('%'),
+                  buildCard('0'),
+                  buildCard('.'),
+                  buildCard('='),
+                ],
+              )
+            ],
+          ),
         ),
       ),
     );
